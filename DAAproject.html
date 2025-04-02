@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Interactive Kruskal MST - Network Design</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 30px;
+      max-width: 700px;
+      margin: auto;
+    }
+    input, button, select {
+      padding: 6px;
+      margin: 5px 0;
+      font-size: 14px;
+    }
+    .section {
+      margin-bottom: 20px;
+      padding: 10px;
+      border-left: 4px solid #2196F3;
+      background-color: #f0f8ff;
+    }
+    .edge-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .edge-row input {
+      width: 80px;
+    }
+    #result {
+      white-space: pre-line;
+      background-color: #f9f9f9;
+      padding: 15px;
+      border: 1px solid #ddd;
+    }
+  </style>
+</head>
+<body>
+
+<h2>🔌 Network Design using Kruskal's MST Algorithm</h2>
+
+<div class="section">
+  <label>Number of Computers (Nodes): </label>
+  <input type="number" id="numNodes" min="2" value="4" />
+</div>
+
+<div class="section">
+  <label>Number of Connections (Edges): </label>
+  <input type="number" id="numEdges" min="1" />
+  <button onclick="generateEdgeInputs()">➕ Add Edges</button>
+
+  <div id="edgesContainer"></div>
+</div>
+
+<div class="section">
+  <button onclick="calculateMST()">🧖️ Calculate MST</button>
+</div>
+
+<h3>📊 Result:</h3>
+<div id="result"></div>
+
+<script>
+  function generateEdgeInputs() {
+    const numEdges = parseInt(document.getElementById("numEdges").value);
+    const container = document.getElementById("edgesContainer");
+    container.innerHTML = "";
+
+    if (isNaN(numEdges) || numEdges <= 0) {
+      container.innerHTML = "<p style='color:red;'>Please enter a valid number of edges.</p>";
+      return;
+    }
+
+    for (let i = 0; i < numEdges; i++) {
+      const edgeRow = document.createElement("div");
+      edgeRow.className = "edge-row";
+      edgeRow.innerHTML = `
+        <span>Edge ${i + 1}:</span>
+        From: <input type="number" class="src" min="0" />
+        To: <input type="number" class="dest" min="0" />
+        Weight: <input type="number" class="weight" min="1" />
+      `;
+      container.appendChild(edgeRow);
+    }
+  }
+
+  class Edge {
+    constructor(src, dest, weight) {
+      this.src = src;
+      this.dest = dest;
+      this.weight = weight;
+    }
+  }
+
+  class Subset {
+    constructor(parent, rank) {
+      this.parent = parent;
+      this.rank = rank;
+    }
+  }
+
+  function find(subsets, i) {
+    if (subsets[i].parent !== i) {
+      subsets[i].parent = find(subsets, subsets[i].parent);
+    }
+    return subsets[i].parent;
+  }
+
+  function union(subsets, x, y) {
+    const xroot = find(subsets, x);
+    const yroot = find(subsets, y);
+
+    if (subsets[xroot].rank < subsets[yroot].rank) {
+      subsets[xroot].parent = yroot;
+    } else if (subsets[xroot].rank > subsets[yroot].rank) {
+      subsets[yroot].parent = xroot;
+    } else {
+      subsets[yroot].parent = xroot;
+      subsets[xroot].rank++;
+    }
+  }
+
+  function kruskalMST(edges, numNodes) {
+    edges.sort((a, b) => a.weight - b.weight);
+    const subsets = Array.from({ length: numNodes }, (_, i) => new Subset(i, 0));
+    const result = [];
+    let e = 0, i = 0;
+
+    while (e < numNodes - 1 && i < edges.length) {
+      const next = edges[i++];
+      const x = find(subsets, next.src);
+      const y = find(subsets, next.dest);
+
+      if (x !== y) {
+        result.push(next);
+        union(subsets, x, y);
+        e++;
+      }
+    }
+
+    return result;
+  }
+
+  function calculateMST() {
+    const numNodes = parseInt(document.getElementById("numNodes").value);
+    const srcs = document.querySelectorAll(".src");
+    const dests = document.querySelectorAll(".dest");
+    const weights = document.querySelectorAll(".weight");
+
+    const edges = [];
+    const errors = [];
+
+    for (let i = 0; i < srcs.length; i++) {
+      const src = parseInt(srcs[i].value);
+      const dest = parseInt(dests[i].value);
+      const weight = parseInt(weights[i].value);
+
+      if (isNaN(src) || isNaN(dest) || isNaN(weight)) {
+        errors.push(`Edge ${i + 1} is incomplete or invalid.`);
+        continue;
+      }
+
+      if (src < 0 || dest < 0 || src >= numNodes || dest >= numNodes) {
+        errors.push(`Edge ${i + 1} has an invalid node index.`);
+        continue;
+      }
+
+      edges.push(new Edge(src, dest, weight));
+    }
+
+    const resultContainer = document.getElementById("result");
+
+    if (errors.length > 0) {
+      resultContainer.innerHTML = `<span style="color:red;"><strong>Errors:</strong><br>${errors.join("<br>")}</span>`;
+      return;
+    }
+
+    if (edges.length < numNodes - 1) {
+      resultContainer.innerHTML = `<span style="color:red;">❗ At least ${numNodes - 1} valid connections (edges) are required to form an MST.</span>`;
+      return;
+    }
+
+    const mst = kruskalMST(edges, numNodes);
+    let output = '';
+    let totalLength = 0;
+
+    mst.forEach(edge => {
+      output += `Computer ${edge.src} -- Computer ${edge.dest} ➝ Cable Length ${edge.weight}<br>`;
+      totalLength += edge.weight;
+    });
+
+    output += `<br> <strong>Total Cable Length Needed:</strong> ${totalLength}`;
+    resultContainer.innerHTML = output;
+  }
+</script>
+
+</body>
+</html>
